@@ -18,7 +18,10 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CEREBRO_DIR="${CEREBRO_DIR:-$HOME/Documents/cerebro}"
+
+# El generador vive aquí. CEREBRO_DIR sigue existiendo para quien tenga la
+# carpeta vieja en ~/Documents/cerebro y no la quiera mover.
+CEREBRO_DIR="${CEREBRO_DIR:-$REPO/generador}"
 FUENTE="${CEREBRO_HTML:-$CEREBRO_DIR/cerebro.html}"
 DESTINO="$REPO/sitio/index.html"
 HUELLA="$REPO/sitio/.huella"
@@ -86,7 +89,12 @@ if [ "$compilar" -eq 1 ] && [ -f "$CEREBRO_DIR/build.py" ]; then
   ( cd "$CEREBRO_DIR" && python3 build.py ) || morir "build.py falló."
 fi
 
-[ -f "$FUENTE" ] || morir "no encuentro $FUENTE (ajusta CEREBRO_DIR o CEREBRO_HTML)."
+if [ ! -f "$FUENTE" ]; then
+  if [ "$compilar" -eq 0 ]; then
+    morir "no encuentro $FUENTE. Corre ./publicar.sh sin --sin-compilar para generarlo."
+  fi
+  morir "no encuentro $FUENTE (ajusta CEREBRO_DIR o CEREBRO_HTML)."
+fi
 
 # 2. ¿Cambió algo? -------------------------------------------------------
 nueva="$(shasum -a 256 "$FUENTE" 2>/dev/null || sha256sum "$FUENTE")"

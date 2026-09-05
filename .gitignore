@@ -1,2 +1,6 @@
 .DS_Store
 *.pass
+
+# El cerebro generado NUNCA se commitea: trae los títulos de los dos vaults en
+# claro y este repo es público. Lo que se publica es sitio/index.html, cifrado.
+generador/cerebro.html
