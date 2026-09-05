@@ -26,7 +26,11 @@ jobs:
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # enablement deja que el propio workflow prenda Pages la primera vez,
+      # en vez de tener que ir a Settings a mano.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: sitio
