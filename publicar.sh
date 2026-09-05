@@ -23,6 +23,7 @@ FUENTE="${CEREBRO_HTML:-$CEREBRO_DIR/cerebro.html}"
 DESTINO="$REPO/sitio/index.html"
 HUELLA="$REPO/sitio/.huella"
 SERVICIO="cerebro-pages"
+CUENTA="${USER:-$(id -un)}"
 
 compilar=1; forzar=0; cifrado=1; subir=1
 for arg in "$@"; do
@@ -39,6 +40,46 @@ done
 aviso() { printf '  %s\n' "$*"; }
 morir() { printf 'publicar: %s\n' "$*" >&2; exit 1; }
 
+# ¿Hay commits hechos que nunca llegaron al remoto?
+pendientes() {
+  git -C "$REPO" rev-parse HEAD >/dev/null 2>&1 || return 1
+  git -C "$REPO" rev-parse '@{upstream}' >/dev/null 2>&1 || return 0
+  [ "$(git -C "$REPO" rev-list --count '@{upstream}..HEAD')" -gt 0 ]
+}
+
+empujar() {
+  local rama principal
+  rama="$(git -C "$REPO" rev-parse --abbrev-ref HEAD)"
+  principal="$(git -C "$REPO" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  principal="${principal#origin/}"
+  if [ -n "$principal" ] && [ "$rama" != "$principal" ]; then
+    aviso "Ojo: estás en la rama '$rama'; Pages publica desde '$principal'."
+  fi
+
+  local espera
+  for espera in 2 4 8 16 0; do
+    if git -C "$REPO" push -u origin "$rama" 2>&1 | sed 's/^/  /'; then
+      return 0
+    fi
+    if [ "$espera" -eq 0 ]; then
+      morir "no pude subir los cambios. Corre ./publicar.sh otra vez cuando haya red."
+    fi
+    aviso "Falló el push; reintento en ${espera}s…"
+    sleep "$espera"
+  done
+}
+
+liga() {
+  local origen ruta
+  origen="$(git -C "$REPO" remote get-url origin 2>/dev/null || true)"
+  ruta="$(printf '%s' "$origen" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
+  if printf '%s' "$ruta" | grep -Eq '^[^/]+/[^/]+$'; then
+    aviso "Publicado: https://${ruta%%/*}.github.io/${ruta#*/}/"
+  else
+    aviso "Publicado."
+  fi
+}
+
 # 1. Compilar ------------------------------------------------------------
 if [ "$compilar" -eq 1 ] && [ -f "$CEREBRO_DIR/build.py" ]; then
   aviso "Compilando el cerebro…"
@@ -50,7 +91,16 @@ fi
 # 2. ¿Cambió algo? -------------------------------------------------------
 nueva="$(shasum -a 256 "$FUENTE" 2>/dev/null || sha256sum "$FUENTE")"
 nueva="${nueva%% *}"
+
 if [ "$forzar" -eq 0 ] && [ -f "$HUELLA" ] && [ "$(cat "$HUELLA")" = "$nueva" ]; then
+  # La huella se escribe junto al sitio y viaja en el commit, así que puede
+  # coincidir aunque la publicada anterior se haya quedado sin subir.
+  if [ "$subir" -eq 1 ] && pendientes; then
+    aviso "El cerebro no cambió, pero la publicada anterior no llegó al remoto."
+    empujar
+    liga
+    exit 0
+  fi
   aviso "El cerebro no ha cambiado desde la última publicada. Nada que hacer."
   exit 0
 fi
@@ -61,7 +111,7 @@ sello="$(date '+%d/%m/%Y %H:%M')"
 
 if [ "$cifrado" -eq 1 ]; then
   if [ -z "${CEREBRO_PASS:-}" ]; then
-    CEREBRO_PASS="$(security find-generic-password -a "${USER:-$(id -un)}" -s "$SERVICIO" -w 2>/dev/null || true)"
+    CEREBRO_PASS="$(security find-generic-password -a "$CUENTA" -s "$SERVICIO" -w 2>/dev/null || true)"
   fi
   if [ -z "${CEREBRO_PASS:-}" ]; then
     [ -t 0 ] || morir "no hay frase. Define CEREBRO_PASS o corre ./publicar.sh una vez a mano para guardarla en el Llavero."
@@ -70,7 +120,7 @@ if [ "$cifrado" -eq 1 ]; then
     [ -n "$CEREBRO_PASS" ] || morir "la frase viene vacía."
     [ "$CEREBRO_PASS" = "$repetida" ] || morir "las frases no coinciden."
     if command -v security >/dev/null 2>&1 &&
-       security add-generic-password -a "${USER:-$(id -un)}" -s "$SERVICIO" -w "$CEREBRO_PASS" -U 2>/dev/null; then
+       security add-generic-password -a "$CUENTA" -s "$SERVICIO" -w "$CEREBRO_PASS" -U 2>/dev/null; then
       aviso "Frase guardada en el Llavero; ya no te la vuelvo a pedir."
     fi
   fi
@@ -90,34 +140,11 @@ if [ "$subir" -eq 0 ]; then
 fi
 
 # 4. Commit y push -------------------------------------------------------
-cd "$REPO"
-rama="$(git rev-parse --abbrev-ref HEAD)"
-principal="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-principal="${principal#origin/}"
-if [ -n "$principal" ] && [ "$rama" != "$principal" ]; then
-  aviso "Ojo: estás en la rama '$rama'; Pages publica desde '$principal'."
-fi
-
-git add -- sitio
-if git diff --cached --quiet; then
+git -C "$REPO" add -- sitio
+if git -C "$REPO" diff --cached --quiet; then
   aviso "El sitio quedó idéntico. Sin commit."
   exit 0
 fi
-git commit -q -m "Cerebro al $sello"
-
-for intento in 2 4 8 16 0; do
-  if git push -u origin "$rama" 2>&1 | sed 's/^/  /'; then
-    break
-  fi
-  [ "$intento" -eq 0 ] && morir "no pude subir los cambios."
-  aviso "Falló el push; reintento en ${intento}s…"
-  sleep "$intento"
-done
-
-origen="$(git remote get-url origin 2>/dev/null || true)"
-ruta="$(printf '%s' "$origen" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
-if printf '%s' "$ruta" | grep -Eq '^[^/]+/[^/]+$'; then
-  aviso "Publicado: https://${ruta%%/*}.github.io/${ruta#*/}/"
-else
-  aviso "Publicado."
-fi
+git -C "$REPO" commit -q -m "Cerebro al $sello"
+empujar
+liga
