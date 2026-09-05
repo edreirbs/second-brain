@@ -92,7 +92,11 @@ fi
 # 4. Commit y push -------------------------------------------------------
 cd "$REPO"
 rama="$(git rev-parse --abbrev-ref HEAD)"
-[ "$rama" = "main" ] || aviso "Ojo: estás en la rama '$rama'; Pages publica desde 'main'."
+principal="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+principal="${principal#origin/}"
+if [ -n "$principal" ] && [ "$rama" != "$principal" ]; then
+  aviso "Ojo: estás en la rama '$rama'; Pages publica desde '$principal'."
+fi
 
 git add -- sitio
 if git diff --cached --quiet; then

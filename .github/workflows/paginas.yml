@@ -1,8 +1,9 @@
 name: Publicar el cerebro
 
+# Sin filtro de ramas a propósito: el trabajo se salta solo si el push no va
+# a la rama principal, así el nombre de esa rama no queda escrito a mano aquí.
 on:
   push:
-    branches: [main]
     paths: ['sitio/**', '.github/workflows/paginas.yml']
   workflow_dispatch:
 
@@ -18,6 +19,7 @@ concurrency:
 
 jobs:
   publicar:
+    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -71,7 +71,12 @@ Va `--sin-compilar` porque `/compilar` ya generó el HTML en el paso anterior.
 
 1. En este repo: **Settings → Pages**.
 2. En *Source* elige **GitHub Actions**.
-3. Listo. Cada push a `main` que toque `sitio/` republica la liga.
+3. Listo. Cada push a la rama principal que toque `sitio/` republica la liga.
+
+El repo se creó vacío, así que GitHub tomó la primera rama que subió como
+principal. Si prefieres que se llame `main`, renómbrala en **Settings →
+Branches**; el workflow lee cuál es la principal en cada corrida, así que
+sigue funcionando con el nombre que le pongas.
 
 Puedes republicar a mano desde **Actions → Publicar el cerebro → Run workflow**.
 
@@ -112,4 +117,4 @@ security delete-generic-password -s cerebro-pages
 | `herramientas/cifrar.py` | Envuelve el HTML en el candado |
 | `herramientas/candado.html` | El diseño de la pantalla de la frase |
 | `sitio/index.html` | Lo que sirve Pages: tu cerebro cifrado |
-| `.github/workflows/paginas.yml` | Despliega `sitio/` en cada push a `main` |
+| `.github/workflows/paginas.yml` | Despliega `sitio/` en cada push a la rama principal |
