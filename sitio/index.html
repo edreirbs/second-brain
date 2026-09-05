@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="dark light">
+<title>Cerebro — sin publicar</title>
+<style>
+  :root{ --fondo:#0e1116; --panel:#161b22; --borde:#2a323d;
+         --texto:#e6edf3; --tenue:#8b98a5; --acento:#6ea8fe; }
+  @media (prefers-color-scheme: light){
+    :root{ --fondo:#f6f8fa; --panel:#fff; --borde:#d8dee4;
+           --texto:#1f2328; --tenue:#636c76; --acento:#0969da; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; min-height:100vh; background:var(--fondo); color:var(--texto);
+       font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+       display:flex; align-items:center; justify-content:center; padding:24px}
+  main{width:100%; max-width:440px; background:var(--panel); border:1px solid var(--borde);
+       border-radius:14px; padding:28px 24px}
+  .marca{font-size:28px; line-height:1; margin-bottom:14px}
+  h1{font-size:17px; margin:0 0 6px; font-weight:600; letter-spacing:-.01em}
+  p{margin:0 0 16px; color:var(--tenue); font-size:13.5px}
+  ol{margin:0; padding-left:20px; color:var(--tenue); font-size:13.5px}
+  li{margin-bottom:8px}
+  code{font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; background:var(--fondo);
+       border:1px solid var(--borde); border-radius:5px; padding:2px 6px; color:var(--texto)}
+  strong{color:var(--texto); font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <div class="marca" aria-hidden="true">🧠</div>
+  <h1>Todavía no has publicado el cerebro</h1>
+  <p>Esta es la página que GitHub Pages sirve mientras <code>sitio/index.html</code> no tenga tu tablero. Para llenarla, desde tu Mac:</p>
+  <ol>
+    <li>Clona este repo una sola vez:<br><code>git clone https://github.com/edreirbs/second-brain.git</code></li>
+    <li>Dentro de la carpeta, corre <code>./publicar.sh</code>.</li>
+    <li>Te va a pedir una <strong>frase</strong>: es la que después escribirás en el celular para abrir el tablero. La guarda en el Llavero y no te la vuelve a pedir.</li>
+  </ol>
+</main>
+</body>
+</html>

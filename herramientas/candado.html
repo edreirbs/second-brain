@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="dark light">
+<title>Cerebro</title>
+<style>
+  :root{
+    --fondo:#0e1116; --panel:#161b22; --borde:#2a323d;
+    --texto:#e6edf3; --tenue:#8b98a5; --acento:#6ea8fe; --error:#ff7b72;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --fondo:#f6f8fa; --panel:#ffffff; --borde:#d8dee4;
+           --texto:#1f2328; --tenue:#636c76; --acento:#0969da; --error:#cf222e; }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--fondo); color:var(--texto);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px; padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom));
+  }
+  .caja{
+    width:100%; max-width:380px; background:var(--panel);
+    border:1px solid var(--borde); border-radius:14px; padding:28px 24px;
+  }
+  .marca{font-size:28px; line-height:1; margin-bottom:14px}
+  h1{font-size:17px; margin:0 0 4px; font-weight:600; letter-spacing:-.01em}
+  p.sub{margin:0 0 20px; color:var(--tenue); font-size:13px}
+  label{display:block; font-size:12px; color:var(--tenue); margin-bottom:6px}
+  input[type=password]{
+    width:100%; padding:11px 12px; font-size:16px; color:var(--texto);
+    background:var(--fondo); border:1px solid var(--borde); border-radius:9px;
+    outline:none; -webkit-appearance:none;
+  }
+  input[type=password]:focus{border-color:var(--acento)}
+  .fila{display:flex; align-items:center; gap:8px; margin:14px 0 18px; font-size:13px; color:var(--tenue)}
+  .fila input{accent-color:var(--acento); width:15px; height:15px; margin:0}
+  button{
+    width:100%; padding:11px; font-size:15px; font-weight:600; font-family:inherit;
+    color:#fff; background:var(--acento); border:0; border-radius:9px; cursor:pointer;
+  }
+  button:disabled{opacity:.55; cursor:default}
+  .aviso{margin-top:14px; font-size:13px; min-height:1.2em}
+  .aviso.mal{color:var(--error)}
+  .aviso.ok{color:var(--tenue)}
+  footer{margin-top:20px; padding-top:16px; border-top:1px solid var(--borde);
+         font-size:11px; color:var(--tenue); display:flex; justify-content:space-between; gap:12px}
+</style>
+</head>
+<body>
+<main class="caja">
+  <div class="marca" aria-hidden="true">🧠</div>
+  <h1>Cerebro</h1>
+  <p class="sub">Contenido cifrado. Escribe la frase para abrirlo.</p>
+  <form id="f" autocomplete="on">
+    <label for="p">Frase</label>
+    <input id="p" type="password" name="password" autocomplete="current-password" autofocus>
+    <div class="fila">
+      <input id="r" type="checkbox">
+      <label for="r" style="margin:0">Recordar en este dispositivo</label>
+    </div>
+    <button id="b" type="submit">Abrir</button>
+  </form>
+  <div class="aviso" id="msj" role="status" aria-live="polite"></div>
+  <footer><span>Compilado</span><span>__SELLO__</span></footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  var SAL = "__SAL__", ITER = __ITER__, HUELLA = "__HUELLA__", DATOS = "__DATOS__";
+  var LLAVE = "cerebro:frase";
+  var f = document.getElementById("f"), campo = document.getElementById("p"),
+      recordar = document.getElementById("r"), boton = document.getElementById("b"),
+      msj = document.getElementById("msj");
+
+  function bytes(b64){
+    var s = atob(b64), a = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+    return a;
+  }
+  function hex(buf){
+    return Array.prototype.map.call(new Uint8Array(buf), function(x){
+      return ("0" + x.toString(16)).slice(-2);
+    }).join("");
+  }
+  function decir(t, mal){ msj.textContent = t; msj.className = "aviso " + (mal ? "mal" : "ok"); }
+
+  async function abrir(frase){
+    var base = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(frase), "PBKDF2", false, ["deriveBits"]);
+    var bits = new Uint8Array(await crypto.subtle.deriveBits(
+      { name:"PBKDF2", salt: bytes(SAL), iterations: ITER, hash:"SHA-256" }, base, 384));
+    var k = await crypto.subtle.importKey(
+      "raw", bits.slice(0, 32), { name:"AES-CBC" }, false, ["decrypt"]);
+    var claro = await crypto.subtle.decrypt(
+      { name:"AES-CBC", iv: bits.slice(32, 48) }, k, bytes(DATOS));
+    if (hex(await crypto.subtle.digest("SHA-256", claro)) !== HUELLA) throw new Error("huella");
+    return new TextDecoder().decode(claro);
+  }
+
+  function pintar(html){
+    document.open();
+    document.write(html);
+    document.close();
+  }
+
+  async function intentar(frase, silencioso){
+    boton.disabled = true;
+    decir("Descifrando…");
+    try {
+      var html = await abrir(frase);
+      if (recordar.checked) { try { localStorage.setItem(LLAVE, frase); } catch (e) {} }
+      pintar(html);
+    } catch (e) {
+      try { localStorage.removeItem(LLAVE); } catch (e2) {}
+      boton.disabled = false;
+      if (silencioso) { decir(""); }
+      else { decir("Frase incorrecta.", true); campo.select(); }
+    }
+  }
+
+  if (!(window.crypto && crypto.subtle)) {
+    decir("Este navegador no puede descifrar la página. Ábrela con HTTPS.", true);
+    boton.disabled = true;
+    return;
+  }
+
+  f.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var v = campo.value;
+    if (v) intentar(v, false);
+  });
+
+  var guardada = null;
+  try { guardada = localStorage.getItem(LLAVE); } catch (e) {}
+  if (guardada) { recordar.checked = true; intentar(guardada, true); }
+})();
+</script>
+</body>
+</html>
