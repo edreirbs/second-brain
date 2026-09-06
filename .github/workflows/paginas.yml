@@ -26,11 +26,10 @@ jobs:
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      # enablement deja que el propio workflow prenda Pages la primera vez,
-      # en vez de tener que ir a Settings a mano.
+      # Pages tiene que estar prendido antes (Settings -> Pages -> GitHub
+      # Actions). No se puede desde aquí: crear el sitio pide permiso de
+      # admin y el GITHUB_TOKEN del workflow no lo tiene.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: sitio

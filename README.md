@@ -79,6 +79,11 @@ Ya no hace falta llamar a `build.py` por separado: `publicar.sh` lo corre.
 2. En *Source* elige **GitHub Actions**.
 3. Listo. Cada push a la rama principal que toque `sitio/` republica la liga.
 
+Este paso es a mano por fuerza: crear el sitio de Pages pide permiso de admin
+y el token que usan los workflows no lo tiene, así que el propio workflow no
+puede prenderlo por ti. Mientras no lo prendas, el despliegue falla en
+`configure-pages` con *Get Pages site failed: Not Found*.
+
 El repo se creó vacío, así que GitHub tomó la primera rama que subió como
 principal. Si prefieres que se llame `main`, renómbrala en **Settings →
 Branches**; el workflow lee cuál es la principal en cada corrida, así que
